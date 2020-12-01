@@ -69,7 +69,7 @@ app.post('/index/utilisateur', function (req, res) {
                     return res.status(400).json({ error: 'Impossible d\'obtenir l\'utilisateur !' });
                 }
 
-                const new_user = result.shift();
+                const new_user = result.shift(); 
 
                 if (new_user) {
                     return res.json(new_user);
