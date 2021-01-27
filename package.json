@@ -1,0 +1,30 @@
+{
+  "name": "projet-web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "bootstrap": "^4.5.3",
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "jquery": "^3.5.1",
+    "mysql": "^2.18.1",
+    "nodemon": "^2.0.7",
+    "package.json": "^2.0.1",
+    "read-package-json": "^3.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DawsonDerycke/Projet_2020-2021.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DawsonDerycke/Projet_2020-2021/issues"
+  },
+  "homepage": "https://github.com/DawsonDerycke/Projet_2020-2021#readme"
+}
