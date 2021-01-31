@@ -7,7 +7,7 @@ module.exports = function (app, queryPromise) {
             res.json(users);
         } catch (e) {
             console.log(e);
-            res.status(400).json({ error: 'Impossible d\'obtenir la liste des utilisateurs !' });
+            return res.status(400).json({ error: 'Impossible d\'obtenir la liste des utilisateurs !' });
         }
     });
 
@@ -15,92 +15,86 @@ module.exports = function (app, queryPromise) {
     app.get('/index/utilisateur/:id', async (req, res) => {
         const id = req.params.id;
         try {
-            const user = await queryPromise('Select * from utilisateur where id = ?', [id]);
-            res.json(user);
+            const [user] = await queryPromise('Select * from utilisateur where id = ?', [id]);
+            if (user) {
+                return res.json(user);
+            }
+            return res.status(404).json({ error: 'Utilisateur non trouvé !' });
         } catch (e) {
             console.log(e);
-            res.status(400).json({ error: 'Impossible d\'obtenir l\'utilisateur !' });
+            return res.status(400).json({ error: 'Impossible d\'obtenir l\'utilisateur !' });
         }
     });
 
     // Ajouter un utilisateur
-    app.post('/index/utilisateur', (req, res) => {
-        const data = req.body;  // Recupération des informations inscrites
-
-        if (data.age <= 4 || data.age >= 110) {
-            return res.status(400).json({ error: 'Veuillez saisir votre âge !' });
-        } else if (data.pseudo.length >= 15) {
-            return res.status(400).json({ error: 'Votre pseudo ne peut pas contenir plus de 15 caractères.' });
-        } else {
-            db.queryPromise('Insert into utilisateur (nom, prenom, age, pseudo) values (?, ?, ?, ?)',
-                [data.nom, data.prenom, data.age, data.pseudo], (error, result) => {
-                    if (error) {
-                        return res.status(400).json({ error: 'Votre pseudo : ' + data.pseudo + ' existe déjà. Veuillez en insérer un autre.' });
-                    }
-                    // Récupérer le nouvel Id
-                    const id = result.insertId;
-
-                    db.queryPromise('Select * from utilisateur where id = ?', [id], (error, result) => {
-                        if (error) {
-                            return res.status(400).json({ error: 'Impossible d\'obtenir l\'utilisateur !' });
-                        }
-
-                        const new_user = result.shift();
-
-                        if (new_user) {
-                            return res.json(new_user);
-                        } res.status(404).json({ error: 'L\'utilisateur n\'a pas été retrouvé.' });
-                    });
-                });
+    app.post('/index/utilisateur', async (req, res) => {
+        const { nom, prenom, age, pseudo } = req.body;  // Recupération des informations inscrites
+        try {
+            if (age <= 4 || age >= 110) {
+                return res.status(404).json({ error: 'Veuillez saisir votre âge !' });
+            } if (pseudo.length >= 15) {
+                return res.status(404).json({ error: 'Votre pseudo ne peut pas contenir plus de 15 caractères.' });
+            } /* Si pseudo déjà prit
+            else if(error){
+                return res.status(404).json({ error: 'Votre pseudo est déjà utilisé. Veuillez en insérer un autre !' });
+            }*/
+            const { insertId } = await queryPromise('Insert into utilisateur (nom, prenom, age, pseudo) ' +
+                'values (?, ?, ?, ?)', [nom, prenom, age, pseudo]);
+            if (insertId != null) {
+                const [user] = await queryPromise('Select * from utilisateur where id = ?', [insertId]);
+                if (user) {
+                    return res.json(user);
+                }
+            } res.status(404).json({ error: 'L\'utilisateur n\'a pas été retrouvé.' });
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ error: 'Impossible d\'obtenir l\'utilisateur !' });
         }
     });
 
     // Supprimer un utilisateur
-    app.delete('/index/utilisateur/:id', (req, res) => {
+    app.delete('/index/utilisateur/:id', async (req, res) => {
         const id = req.params.id;
-
-        db.queryPromise('Delete from utilisateur where id = ?', [id], (error, result) => {
+        try {
+            const result = await queryPromise('Delete from utilisateur where id = ?', [id]);
             if (result.affectedRows === 1) {
-                res.json('Le joueur n°' + id + ' est supprimé !');
+                res.json('Le joueur contenant l\'id n°' + id + ' a été supprimé !');
                 return res.status(204).send();
-            } else if (error) {
-                return res.status(400).json({ error: 'L\'utilisateur n\'a pas pu être supprimé !' });
-            } return res.status(404).json({ error: 'L\'utilisateur n\'existe pas !' });
-        });
+            }
+            return res.status(404).json({ error: 'L\'utilisateur n\'existe pas !' });
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ error: 'Impossible de supprimer l\'utilisateur !' });
+        }
     });
 
     // Modifier un utilisateur
-    app.post('/index/utilisateur/:id', (req, res) => {
+    app.post('/index/utilisateur/:id', async (req, res) => {
         const id = req.params.id;
-        const nom = req.body.nom;
-        const prenom = req.body.prenom;
-        const age = req.body.age;
+        const { nom, prenom, age } = req.body;  // Recupération des informations inscrites
 
-        db.queryPromise('Select nom, prenom, age from utilisateur where id = ?', [id], (error, result) => {
-            if (error) {
-                return res.status(400).json({ error: 'Impossible de modifier l\'utilisateur.' });
-            }
-            if (result.length != 1) {
+        try {
+            const [user] = await queryPromise('Select nom, prenom, age from utilisateur where id = ?', [id]);
+            if (user == null) {
                 return res.status(404).json({ error: 'L\'utilisateur n\'a pas été retrouvé.' });
             }
-
-            const user = result[0];
             user.nom = nom;
             user.prenom = prenom;
             user.age = age;
 
             if (user.age <= 4 || user.age >= 110) {
-                return res.status(400).json({ error: 'Veuillez saisir votre âge !' });
+                return res.status(404).json({ error: 'Veuillez saisir votre âge !' });
             }
-
-            db.queryPromise('Update utilisateur set nom = ?, prenom = ?, age = ? where id = ?', [
+            const { affectedRows } = await queryPromise('Update utilisateur set nom = ?, prenom = ?, age = ? where id = ?', [
                 user.nom, user.prenom, user.age, [id]
-            ], (error) => {
-                if (error) {
-                    return res.status(400).json({ error: 'La mise à jour de l\'utilisateur à échoué !' });
-                }
-                res.json(user);
-            });
-        });
+            ]);
+            if(affectedRows == 0){
+                throw "Update failed !";
+            }
+            res.json(user);
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ error: 'Impossible de modifier l\'utilisateur !' });
+        }
     });
 }

@@ -4,7 +4,7 @@ module.exports = function (app, queryPromise) {
     app.get('/index/classes', async (req, res) => {
         try {
             const classes = await queryPromise(
-                'Select c.*, u.pseudo from classe as c join utilisateur as u on u.id = c.id_utilisateur'
+                'Select u.pseudo, c.* from classe as c join utilisateur as u on u.id = c.id_utilisateur'
             );
             res.json(classes);
         } catch (e) {
@@ -16,83 +16,82 @@ module.exports = function (app, queryPromise) {
     app.get('/index/classe/:id', async (req, res) => {
         const id = req.params.id;
         try {
-            const classe = await queryPromise('Select * from classe where id = ?', [id]);
-            res.json(classe);
+            const [classe] = await queryPromise('Select * from classe where id = ?', [id]);
+            if (classe) {
+                return res.json(classe);
+            }
+            return res.status(404).json({ error: 'Classe non trouvé !' });
         } catch (e) {
             console.log(e);
-            res.status(400).json({ error: 'Impossible d\'obtenir la classe !' });
+            return res.status(400).json({ error: 'Impossible d\'obtenir la classe !' });
         }
     });
+
     // Ajouter une classe
-    app.post('/index/classe', (req, res) => {
-        const data = req.body;  // Recupération des informations inscrites
-
-        db.queryPromise('Insert into classe (nom_classe, sexe, niveau) values (?, ?, ?)',
-            [data.nom_classe, data.sexe, data.niveau], (error, result) => {
-                if (error) {
-                    return res.status(400).json({ error: 'Impossible d\'enregistrer la classe' });
+    app.post('/index/classe', async (req, res) => {
+        const { nom_classe, sexe, niveau, id_utilisateur } = req.body;  // Recupération des informations inscrites
+        try {
+            /*if (sexe != "M" || sexe != "F") {
+                return res.status(404).json({ error: 'Veuillez insérer M ou F en fonction de votre personnage !' });
+            } if (id_utilisateur == null) {
+                return res.status(404).json({ error: 'Veuillez inscrire un ID existant.' });
+            }*/
+            const { insertId } = await queryPromise('Insert into classe (nom_classe, sexe, niveau, id_utilisateur) ' +
+                'values (?, ?, ?, ?)', [nom_classe, sexe, niveau, id_utilisateur]);
+            if (insertId != null) {
+                const [classe] = await queryPromise('Select * from classe where id = ?', [insertId]);
+                if (classe) {
+                    return res.json(classe);
                 }
-                // Récupérer le nouvel Id
-                const id = result.insertId;
-
-                db.queryPromise('Select * from classe where id = ?', [id], (error, result) => {
-                    if (error) {
-                        return res.status(400).json({ error: 'Impossible d\'obtenir la classe !' });
-                    }
-
-                    const new_classe = result.shift();
-
-                    if (new_classe) {
-                        return res.json(new_classe);
-                    } res.status(404).json({ error: 'La classe n\'a pas été retrouvée.' });
-                });
-            });
-
+            } res.status(404).json({ error: 'La classe n\'a pas été retrouvée.' });
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ error: 'Impossible d\'obtenir La classe !' });
+        }
     });
 
     // Supprimer une classe
-    app.delete('/index/classe/:id', (req, res) => {
+    app.delete('/index/classe/:id', async (req, res) => {
         const id = req.params.id;
-
-        db.queryPromise('Delete from classe where id = ?', [id], (error, result) => {
+        try {
+            const result = await queryPromise('Delete from classe where id = ?', [id]);
             if (result.affectedRows === 1) {
-                res.json('La classe n°' + id + ' est supprimée !');
+                res.json('La classe contenant l\'id n°' + id + ' a été supprimée !');
                 return res.status(204).send();
-            } else if (error) {
-                return res.status(400).json({ error: 'La classe n\'a pas pu être supprimée !' });
-            } return res.status(404).json({ error: 'La classe n\'existe pas !' });
-        });
+            }
+            return res.status(404).json({ error: 'La classe n\'existe pas !' });
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ error: 'Impossible de supprimer la classe !' });
+        }
     });
 
     // Modifier une classe
-    app.post('/index/classe/:id', (req, res) => {
+    app.post('/index/classe/:id', async (req, res) => {
         const id = req.params.id;
-        const nom_classe = req.body.nom_classe;
-        const sexe = req.body.sexe;
-        const niveau = req.body.niveau;
-
-        db.queryPromise('Select nom_classe, sexe, niveau from classe where id = ?', [id], (error, result) => {
-            if (error) {
-                return res.status(400).json({ error: 'Impossible de modifier la classe.' });
-            }
-            if (result.length != 1) {
+        const { nom_classe, sexe, niveau } = req.body;  // Recupération des informations inscrites
+        try {
+            const [classe] = await queryPromise('Select nom_classe, sexe, niveau from classe where id = ?', [id]);
+            if (classe == null) {
                 return res.status(404).json({ error: 'La classe n\'a pas été retrouvée.' });
             }
-
-            const classe = result[0];
             classe.nom_classe = nom_classe;
             classe.sexe = sexe;
             classe.niveau = niveau;
 
-            db.queryPromise('Update classe set nom_classe = ?, sexe = ?, niveau = ? where id = ?', [
+           /*if (sexe != "M" || sexe != "F") {
+                return res.status(404).json({ error: 'Veuillez insérer M ou F en fonction de votre personnage !' });
+            } */
+            const { affectedRows } = await queryPromise('Update classe set nom_classe = ?, sexe = ?, niveau = ? where id = ?', [
                 classe.nom_classe, classe.sexe, classe.niveau, [id]
-            ], (error) => {
-                if (error) {
-                    return res.status(400).json({ error: 'La mise à jour de la classe à échouée !' });
-                }
-                res.json(classe);
-            });
-        });
+            ]);
+            if (affectedRows == 0) {
+                throw "Update failed !";
+            }
+            res.json(classe);
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ error: 'Impossible de modifier la classe !' });
+        }
     });
 }
-
