@@ -30,14 +30,23 @@ module.exports = function (app, queryPromise) {
     app.post('/index/utilisateur', async (req, res) => {
         const { nom, prenom, age, pseudo } = req.body;  // Recupération des informations inscrites
         try {
-            if (age <= 4 || age >= 110) {
+            if (age != parseInt(age) || age <= 4 || age >= 110) {
                 return res.status(404).json({ error: 'Veuillez saisir votre âge !' });
-            } if (pseudo.length >= 15) {
+            }
+            if (pseudo.length >= 15) {
                 return res.status(404).json({ error: 'Votre pseudo ne peut pas contenir plus de 15 caractères.' });
-            } /* Si pseudo déjà prit
-            else if(error){
-                return res.status(404).json({ error: 'Votre pseudo est déjà utilisé. Veuillez en insérer un autre !' });
-            }*/
+            }
+            try {
+                const [unique] = await queryPromise(
+                    'Select count(pseudo) as count from utilisateur where pseudo = ?', [pseudo]
+                );
+                if (unique.count > 0) {
+                    return res.status(404).json({ error: 'Votre pseudo est déjà utilisé. Veuillez en insérer un autre !' });
+                }
+            } catch (e) {
+                console.log(e);
+                return res.status(400).json({ error: 'Une erreur est survenue !' });
+            }
             const { insertId } = await queryPromise('Insert into utilisateur (nom, prenom, age, pseudo) ' +
                 'values (?, ?, ?, ?)', [nom, prenom, age, pseudo]);
             if (insertId != null) {
@@ -58,7 +67,6 @@ module.exports = function (app, queryPromise) {
         try {
             const result = await queryPromise('Delete from utilisateur where id = ?', [id]);
             if (result.affectedRows === 1) {
-                res.json('Le joueur contenant l\'id n°' + id + ' a été supprimé !');
                 return res.status(204).send();
             }
             return res.status(404).json({ error: 'L\'utilisateur n\'existe pas !' });
@@ -82,13 +90,13 @@ module.exports = function (app, queryPromise) {
             user.prenom = prenom;
             user.age = age;
 
-            if (user.age <= 4 || user.age >= 110) {
+            if (age != parseInt(age) || age <= 4 || age >= 110) {
                 return res.status(404).json({ error: 'Veuillez saisir votre âge !' });
             }
             const { affectedRows } = await queryPromise('Update utilisateur set nom = ?, prenom = ?, age = ? where id = ?', [
                 user.nom, user.prenom, user.age, [id]
             ]);
-            if(affectedRows == 0){
+            if (affectedRows == 0) {
                 throw "Update failed !";
             }
             res.json(user);

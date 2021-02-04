@@ -31,11 +31,21 @@ module.exports = function (app, queryPromise) {
     app.post('/index/classe', async (req, res) => {
         const { nom_classe, sexe, niveau, id_utilisateur } = req.body;  // Recupération des informations inscrites
         try {
-            /*if (sexe != "M" || sexe != "F") {
+            if (!['F', 'M'].includes(sexe)) {
                 return res.status(404).json({ error: 'Veuillez insérer M ou F en fonction de votre personnage !' });
-            } if (id_utilisateur == null) {
-                return res.status(404).json({ error: 'Veuillez inscrire un ID existant.' });
-            }*/
+            }
+            if (niveau != parseInt(niveau) || niveau <= 0 || niveau > 100) {
+                return res.status(404).json({ error: 'Votre niveau ne peut pas être supérieur à 100.' });
+            }
+            try {
+                const [nb_id] = await queryPromise('Select count(id) as count from utilisateur where id = ?', [id_utilisateur]);
+                if (nb_id != parseInt(nb_id) && nb_id.count == 0) {
+                    return res.status(404).json({ error: 'Veuillez inscrire un ID existant.' });
+                }
+            } catch (e) {
+                console.log(e);
+                return res.status(400).json({ error: 'Une erreur est survenue !' });
+            }
             const { insertId } = await queryPromise('Insert into classe (nom_classe, sexe, niveau, id_utilisateur) ' +
                 'values (?, ?, ?, ?)', [nom_classe, sexe, niveau, id_utilisateur]);
             if (insertId != null) {
@@ -56,7 +66,6 @@ module.exports = function (app, queryPromise) {
         try {
             const result = await queryPromise('Delete from classe where id = ?', [id]);
             if (result.affectedRows === 1) {
-                res.json('La classe contenant l\'id n°' + id + ' a été supprimée !');
                 return res.status(204).send();
             }
             return res.status(404).json({ error: 'La classe n\'existe pas !' });
@@ -79,9 +88,12 @@ module.exports = function (app, queryPromise) {
             classe.sexe = sexe;
             classe.niveau = niveau;
 
-           /*if (sexe != "M" || sexe != "F") {
+            if (!['F', 'M'].includes(sexe)) {
                 return res.status(404).json({ error: 'Veuillez insérer M ou F en fonction de votre personnage !' });
-            } */
+            }
+            if (niveau != parseInt(niveau) || niveau <= 0 || niveau > 100) {
+                return res.status(404).json({ error: 'Votre niveau ne peut pas être supérieur à 100.' });
+            }
             const { affectedRows } = await queryPromise('Update classe set nom_classe = ?, sexe = ?, niveau = ? where id = ?', [
                 classe.nom_classe, classe.sexe, classe.niveau, [id]
             ]);
