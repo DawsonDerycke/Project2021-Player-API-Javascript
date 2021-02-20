@@ -1,9 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
-
 const body_parser = require('body-parser');
-const db = require('./bdd');
 const queryPromise = require('./queryPromise');
 const user = require('./controllers/user.js');
 const classe = require('./controllers/classe.js');
