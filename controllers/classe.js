@@ -4,7 +4,7 @@ module.exports = function (app, queryPromise) {
     app.get('/index/classes', async (req, res) => {
         try {
             const classes = await queryPromise(
-                'Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur'
+                'Select c.*, u.* from classe as c inner join utilisateur as u on u.id = c.id_utilisateur'
             );
             res.json(classes);
         } catch (e) {
