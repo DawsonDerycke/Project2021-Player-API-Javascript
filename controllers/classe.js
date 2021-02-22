@@ -4,7 +4,7 @@ module.exports = function (app, queryPromise) {
     app.get('/index/classes', async (req, res) => {
         try {
             const classes = await queryPromise(
-                'Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur'
+                'Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur order by u.id asc, c.nom_classe, c.id asc'
             );
             res.json(classes);
         } catch (e) {
@@ -16,7 +16,7 @@ module.exports = function (app, queryPromise) {
     app.get('/index/classe/:id', async (req, res) => {
         const id = req.params.id;
         try {
-            const [classe] = await queryPromise('Select * from classe where id = ?', [id]);
+            const [classe] = await queryPromise('Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur where c.id = ?', [id]);
             if (classe) {
                 return res.json(classe);
             }
@@ -49,7 +49,7 @@ module.exports = function (app, queryPromise) {
             const { insertId } = await queryPromise('Insert into classe (nom_classe, sexe, niveau, id_utilisateur) ' +
                 'values (?, ?, ?, ?)', [nom_classe, sexe, niveau, id_utilisateur]);
             if (insertId != null) {
-                const [classe] = await queryPromise('Select * from classe where id = ?', [insertId]);
+                const [classe] = await queryPromise('Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur where c.id = ?', [insertId]);
                 if (classe) {
                     return res.json(classe);
                 }
@@ -80,7 +80,7 @@ module.exports = function (app, queryPromise) {
         const id = req.params.id;
         const { nom_classe, sexe, niveau } = req.body;  // Recupération des informations inscrites
         try {
-            const [classe] = await queryPromise('Select nom_classe, sexe, niveau from classe where id = ?', [id]);
+            const [classe] = await queryPromise('Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur where c.id = ?', [id]);
             if (classe == null) {
                 return res.status(404).json({ error: 'La classe n\'a pas été retrouvée.' });
             }
