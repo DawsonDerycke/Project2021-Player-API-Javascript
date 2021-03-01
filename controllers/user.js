@@ -11,6 +11,18 @@ module.exports = function (app, queryPromise) {
         }
     });
 
+    // Récupérer les utilisateurs sans doublon
+    app.get('/index/utilisateurs/noDuplicate', async (req, res) => {
+        try {
+            const classes = await queryPromise(
+                'Select id, pseudo from utilisateur group by pseudo order by id'
+            );
+            res.json(classes);
+        } catch (e) {
+            res.status(400).json({ error: 'Impossible de récuperer les utilisateurs !' });
+        }
+    });
+
     // Récupérer un utilisateur
     app.get('/index/utilisateur/:id', async (req, res) => {
         const id = req.params.id;
@@ -33,8 +45,8 @@ module.exports = function (app, queryPromise) {
             if (age != parseInt(age) || age <= 4 || age >= 110) {
                 return res.status(404).json({ error: 'Veuillez saisir votre âge !' });
             }
-            if (pseudo.length >= 15) {
-                return res.status(404).json({ error: 'Votre pseudo ne peut pas contenir plus de 15 caractères.' });
+            if (pseudo.length <= 2 || pseudo.length > 15) {
+                return res.status(404).json({ error: 'Votre pseudo doit contenir entre 3 et 15 caractères.' });
             }
             try {
                 const [unique] = await queryPromise(

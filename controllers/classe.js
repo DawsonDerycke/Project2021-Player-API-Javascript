@@ -4,7 +4,7 @@ module.exports = function (app, queryPromise) {
     app.get('/index/classes', async (req, res) => {
         try {
             const classes = await queryPromise(
-                'Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur order by u.id asc, c.nom_classe, c.id asc'
+                'Select c.*, u.pseudo, u.nom, u.prenom, u.age from classe as c inner join utilisateur as u on u.id = c.id_utilisateur ORDER BY u.id asc, c.nom_classe, c.id asc'
             );
             res.json(classes);
         } catch (e) {
@@ -31,6 +31,9 @@ module.exports = function (app, queryPromise) {
     app.post('/index/classe', async (req, res) => {
         const { nom_classe, sexe, niveau, id_utilisateur } = req.body;  // Recupération des informations inscrites
         try {
+            if (!['Archer', 'Assassin', 'Berseker', 'Chevalier', 'Soigneur'].includes(nom_classe)) {
+                return res.status(404).json({ error: 'Veuillez insérer une classe existante !' });
+            }
             if (!['F', 'M'].includes(sexe)) {
                 return res.status(404).json({ error: 'Veuillez insérer M ou F en fonction de votre personnage !' });
             }
@@ -88,6 +91,9 @@ module.exports = function (app, queryPromise) {
             classe.sexe = sexe;
             classe.niveau = niveau;
 
+            if (!['Archer', 'Assassin', 'Berseker', 'Chevalier', 'Soigneur'].includes(nom_classe)) {
+                return res.status(404).json({ error: 'Veuillez insérer une classe existante !' });
+            }
             if (!['F', 'M'].includes(sexe)) {
                 return res.status(404).json({ error: 'Veuillez insérer M ou F en fonction de votre personnage !' });
             }
