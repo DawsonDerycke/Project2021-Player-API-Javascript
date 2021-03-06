@@ -1,3 +1,5 @@
+const joi = require('joi');
+
 module.exports = function (app, queryPromise) {
 
     // Récupérer tous les utilisateurs
@@ -41,24 +43,33 @@ module.exports = function (app, queryPromise) {
     // Ajouter un utilisateur
     app.post('/index/utilisateur', async (req, res) => {
         const { nom, prenom, age, pseudo } = req.body;  // Recupération des informations inscrites
+        
+        const schema = joi.object({
+            nom: joi.string().alphanum().min(2).max(20).required(),
+            prenom: joi.string().alphanum().min(2).max(20).required(),
+            age: joi.number().integer().min(5).max(110).required(),
+            pseudo: joi.string().min(3).max(15).required(),
+        });
+
+        const { error } = schema.validate(req.body);
+
+        if (error != null) {
+            const firstError = error.details[0];
+            return res.status(404).json({ error: firstError.message });
+        }
+        
         try {
-            if (age != parseInt(age) || age <= 4 || age >= 110) {
-                return res.status(404).json({ error: 'Veuillez saisir votre âge !' });
+            const [unique] = await queryPromise(
+                'Select count(pseudo) as count from utilisateur where pseudo = ?', [pseudo]
+            );
+            if (unique.count > 0) {
+                return res.status(404).json({ error: 'Votre pseudo est déjà utilisé. Veuillez en insérer un autre !' });
             }
-            if (pseudo.length <= 2 || pseudo.length > 15) {
-                return res.status(404).json({ error: 'Votre pseudo doit contenir entre 3 et 15 caractères.' });
-            }
-            try {
-                const [unique] = await queryPromise(
-                    'Select count(pseudo) as count from utilisateur where pseudo = ?', [pseudo]
-                );
-                if (unique.count > 0) {
-                    return res.status(404).json({ error: 'Votre pseudo est déjà utilisé. Veuillez en insérer un autre !' });
-                }
-            } catch (e) {
-                console.log(e);
-                return res.status(400).json({ error: 'Une erreur est survenue !' });
-            }
+        } catch (e) {
+            console.log(e);
+            return res.status(400).json({ error: 'Une erreur est survenue !' });
+        }
+        try {
             const { insertId } = await queryPromise('Insert into utilisateur (nom, prenom, age, pseudo) ' +
                 'values (?, ?, ?, ?)', [nom, prenom, age, pseudo]);
             if (insertId != null) {
@@ -93,6 +104,18 @@ module.exports = function (app, queryPromise) {
         const id = req.params.id;
         const { nom, prenom, age } = req.body;  // Recupération des informations inscrites
 
+        const schema = joi.object({
+            nom: joi.string().alphanum().min(2).max(20).required(),
+            prenom: joi.string().alphanum().min(2).max(20).required(),
+            age: joi.number().integer().min(5).max(110).required(),
+        });
+
+        const { error } = schema.validate(req.body);
+
+        if (error != null) {
+            const firstError = error.details[0];
+            return res.status(404).json({ error: firstError.message });
+        }
         try {
             const [user] = await queryPromise('Select nom, prenom, age from utilisateur where id = ?', [id]);
             if (user == null) {
@@ -102,9 +125,6 @@ module.exports = function (app, queryPromise) {
             user.prenom = prenom;
             user.age = age;
 
-            if (age != parseInt(age) || age <= 4 || age >= 110) {
-                return res.status(404).json({ error: 'Veuillez saisir votre âge !' });
-            }
             const { affectedRows } = await queryPromise('Update utilisateur set nom = ?, prenom = ?, age = ? where id = ?', [
                 user.nom, user.prenom, user.age, [id]
             ]);
