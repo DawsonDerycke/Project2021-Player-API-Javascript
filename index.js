@@ -9,7 +9,7 @@ const classe = require('./controllers/classe.js');
 app.use(body_parser.urlencoded({ extended: false }));
 app.use(cors());
 
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 // CONTROLLERS
 user(app, queryPromise);
